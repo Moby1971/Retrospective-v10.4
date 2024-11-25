@@ -1,0 +1,17 @@
+
+.DS_Store
+@retro/retro.m
+functions/export/niftii/dicm2nii.m
+functions/export/niftii/dicm_dict.m
+functions/export/niftii/dicm_hdr.m
+functions/export/niftii/dicm_img.m
+functions/export/niftii/dicm_save.m
+functions/export/niftii/nii_tool.m
+functions/export/retroExportDicomDcm.m
+functions/export/retroExportDicomMat.m
+functions/export/retroExportGifFcn.m
+functions/export/retroExportNiftiFcn.m
+functions/nufft/@gpuSparse/gpuSparse.m
+tmp/1.MRD
+tmp/External slice navigator design (flash_710).pdf
+tmp/Inbox — g.j.strijkers@amsterdamumc.nl.pdf
