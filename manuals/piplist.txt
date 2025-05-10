@@ -1,2 +1,0 @@
-python3 -m pip install --upgrade pip
-pip install tensorboard tensorboard-data-server imageio matplotlib matplotlib-inline opencv-python  scikit-image  pillow h5py  torch  torchvision  torchmetrics  tqdm  pandas  scipy  opencv-python interval unzip nibabel  tensorboard 
