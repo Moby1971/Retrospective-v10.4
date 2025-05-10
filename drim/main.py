@@ -1,4 +1,4 @@
-__author__ = 'Kai'
+__author__ = 'BMEP'
 
 import sys
 sys.path.insert(0, './drim')

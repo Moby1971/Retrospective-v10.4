@@ -1,5 +1,5 @@
 """Train a model"""
-__author__ = 'Kai'
+__author__ = 'BMEP'
 
 import rim
 from data_sampler import MRData

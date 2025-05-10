@@ -1,4 +1,4 @@
-__author__ = 'Kai Lønning'
+__author__ = 'BMEP'
 
 import torch
 from torch import nn
