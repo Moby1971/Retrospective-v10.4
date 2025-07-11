@@ -84,9 +84,9 @@ samples = np.random.randint(0, trajectoryLength, N)
 filling = np.zeros(targetKspaceSize, dtype=int)
 
 for s in samples:
-    index = traj[s] + targetKspaceSize // 2 + 1
-    if 0 <= index - 1 < targetKspaceSize:
-        filling[index - 1] += 1
+    index = traj[s] + targetKspaceSize // 2
+    if 0 <= index < targetKspaceSize:
+        filling[index] += 1
 
 filling = filling / np.sum(filling)
 
@@ -133,6 +133,9 @@ centerIdx = np.arange(centerStart, centerEnd)
 edgeIdx = np.concatenate((np.arange(0, int(0.1 * targetKspaceSize)), 
                           np.arange(int(0.9 * targetKspaceSize), targetKspaceSize)))
 
+ky_min = int(traj.min())
+ky_max = int(traj.max())
+
 print("\n--- K-space filling summary ---")
 print(f"Target k-space size    : {targetKspaceSize}")
 print(f"Trajectory length      : {trajectoryLength}")
@@ -143,4 +146,5 @@ print(f"Min filling            : {np.min(filling):.4f}")
 print(f"Max filling            : {np.max(filling):.4f}")
 print(f"Std of filling         : {np.std(filling):.4f}")
 print(f"Center/Edge fill ratio : {np.mean(filling[centerIdx]) / np.mean(filling[edgeIdx]):.2f}")
+print(f"ky range               : {ky_min} to {ky_max}")
 print("-------------------------------\n")
