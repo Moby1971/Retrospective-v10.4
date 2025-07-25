@@ -1,0 +1,400 @@
+{
+  "newestVersions": [
+    "10.5",
+    "10.4",
+    "10.3",
+    "10.2",
+    "10.1",
+    "10.0",
+    "9.9",
+    "9.8",
+    "9.7",
+    "9.6",
+    "9.5",
+    "9.4"
+  ],
+  "searchStr": "retrospective_version=",
+  "web1": "https://github.com/Moby1971/Retrospective-v",
+  "web2": "/blob/main/appversion.txt",
+  "flashShiftVersion": 639,
+  "flashExternalNavVersion": 710,
+  "AImodule": false,
+  "maxNumCores": 8,
+  "brightred": "Red",
+  "red": "#D95319",
+  "brightgreen": "Green",
+  "green": "#6CB557",
+  "yellow": "Yellow",
+  "orange": "#FDA400",
+  "blue": "#0073BE",
+  "black": "Black",
+  "lightblue": "#DEE6EB",
+  "lightgrey": "#F0F0F0",
+  "guiBlack": [
+    0.15,
+    0.15,
+    0.15
+  ],
+  "guiGrey": [
+    0.94,
+    0.94,
+    0.94
+  ],
+  "guiMiddleGrey": [
+    0.9,
+    0.9,
+    0.9
+  ],
+  "guiDarkGrey": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "guiWhite": [
+    1,
+    1,
+    1
+  ],
+  "guiBlackBlue": [
+    0.02,
+    0.13,
+    0.3
+  ],
+  "traceGreen": [
+    0.466,
+    0.674,
+    0.188
+  ],
+  "traceOrange": [
+    0.929,
+    0.694,
+    0.125
+  ],
+  "amsterdamUmcIcon": "AmsterdamUMC.png",
+  "mrsolutionsIcon": "MRSolutionsLogo.gif",
+  "retrospectiveIcon": "Retrospective.png",
+  "diskIcon": "disk.png",
+  "filterIcon": "filter.png",
+  "sortIcon": "sort.gif",
+  "recoIcon": "reconstruct.gif",
+  "exitIcon": "exit.png",
+  "playIcon": "play.gif",
+  "stopIcon": "stop.gif",
+  "cwIcon": "cw.png",
+  "ccwIcon": "ccw.png",
+  "statusOkayIcon": "statusokay.gif",
+  "statusWarningIcon": "statuswarning.gif",
+  "statusErrorIcon": "statuserror.gif",
+  "statusBusyIcon": "busy.gif",
+  "statusAutoIcon": "auto.png",
+  "squareIcon": "square.gif",
+  "contrastIcon": "contrast.png",
+  "navIcon": "nav.gif",
+  "navMovieSpeed": 25,
+  "maxNrSpokesPlot": 500,
+  "traceLength": 60,
+  "mouse": {
+    "bandwidthHR": 60,
+    "HeartWidthEditField": 60,
+    "bandwidthRR": 20,
+    "RespWidthEditField": 40,
+    "respPercentage": 30,
+    "RespWindowEditField": 30,
+    "MinHeartRateEditField": 300,
+    "HeartMinEditField": 300,
+    "MaxHeartRateEditField": 700,
+    "HeartMaxEditField": 700,
+    "MinRespRateEditField": 30,
+    "RespMinEditField": 30,
+    "MaxRespRateEditField": 120,
+    "RespMaxEditField": 120,
+    "FilterOrderEditField": 4,
+    "RespShiftEditField": 0
+  },
+  "rat": {
+    "bandwidthHR": 50,
+    "HeartWidthEditField": 50,
+    "bandwidthRR": 20,
+    "RespWidthEditField": 40,
+    "respPercentage": 30,
+    "RespWindowEditField": 30,
+    "MinHeartRateEditField": 200,
+    "HeartMinEditField": 200,
+    "MaxHeartRateEditField": 500,
+    "HeartMaxEditField": 500,
+    "MinRespRateEditField": 30,
+    "RespMinEditField": 30,
+    "MaxRespRateEditField": 120,
+    "RespMaxEditField": 120,
+    "FilterOrderEditField": 4,
+    "RespShiftEditField": 0
+  },
+  "zebrafish": {
+    "bandwidthHR": 60,
+    "HeartWidthEditField": 60,
+    "bandwidthRR": 20,
+    "RespWidthEditField": 40,
+    "respPercentage": 30,
+    "RespWindowEditField": 30,
+    "MinHeartRateEditField": 60,
+    "HeartMinEditField": 60,
+    "MaxHeartRateEditField": 300,
+    "HeartMaxEditField": 300,
+    "MinRespRateEditField": 10,
+    "RespMinEditField": 10,
+    "MaxRespRateEditField": 90,
+    "RespMaxEditField": 90,
+    "FilterOrderEditField": 4,
+    "RespShiftEditField": 0
+  },
+  "respHarmonics": 4,
+  "splineFactor": 60,
+  "respPercentage": 30,
+  "sgFilterOrder": 3,
+  "sgFilterLength": 9,
+  "AutoGuessRecoCheckBox": 1,
+  "scoutReco": {
+    "FramesEditField": 1,
+    "DynamicsEditField": 1,
+    "SharingEditField": 0,
+    "WVxyzEditField": 0.001,
+    "TVxyzEditField": 0.005,
+    "LLRxyzEditField": 0,
+    "TVcineEditField": 0,
+    "TVdynEditField": 0,
+    "ESPIRiTCheckBox": [
+      0,
+      1
+    ],
+    "RingRmCheckBox": 0,
+    "NLMFCheckBox": 0
+  },
+  "systolicReco": {
+    "FramesEditField": 15,
+    "DynamicsEditField": 1,
+    "SharingEditField": 0,
+    "WVxyzEditField": 0.001,
+    "TVxyzEditField": 0,
+    "TVcineEditField": [
+      0.01,
+      0.1
+    ],
+    "LLRxyzEditField": [
+      0,
+      0.001,
+      0.01
+    ],
+    "TVdynEditField": 0,
+    "ESPIRiTCheckBox": [
+      0,
+      1
+    ],
+    "RingRmCheckBox": 0,
+    "NLMFCheckBox": 0
+  },
+  "diastolicReco": {
+    "FramesEditField": 32,
+    "DynamicsEditField": 1,
+    "SharingEditField": 0,
+    "WVxyzEditField": 0.001,
+    "TVxyzEditField": 0,
+    "TVcineEditField": [
+      0.01,
+      0.1
+    ],
+    "LLRxyzEditField": [
+      0,
+      0.001,
+      0.01
+    ],
+    "TVdynEditField": 0,
+    "ESPIRiTCheckBox": [
+      0,
+      1
+    ],
+    "RingRmCheckBox": 0,
+    "NLMFCheckBox": 0
+  },
+  "respirationReco": {
+    "FramesEditField": 32,
+    "DynamicsEditField": 1,
+    "SharingEditField": 0,
+    "WVxyzEditField": 0.001,
+    "TVxyzEditField": 0,
+    "TVcineEditField": [
+      0.01,
+      0.1
+    ],
+    "LLRxyzEditField": [
+      0,
+      0.001,
+      0.01
+    ],
+    "TVdynEditField": 0,
+    "ESPIRiTCheckBox": [
+      0,
+      1
+    ],
+    "RingRmCheckBox": 0,
+    "NLMFCheckBox": 0
+  },
+  "realtimeReco": {
+    "FramesEditField": 2,
+    "DynamicsEditField": 1,
+    "SharingEditField": 3,
+    "WVxyzEditField": 0,
+    "TVxyzEditField": 0.01,
+    "TVcineEditField": 0.001,
+    "LLRxyzEditField": [
+      0,
+      0.05
+    ],
+    "TVdynEditField": 0.2,
+    "ESPIRiTCheckBox": [
+      0,
+      1
+    ],
+    "RingRmCheckBox": 0,
+    "NLMFCheckBox": 1
+  },
+  "vfaReco": {
+    "FramesEditField": 6,
+    "DynamicsEditField": 1,
+    "SharingEditField": 0,
+    "WVxyzEditField": 0.002,
+    "TVxyzEditField": 0,
+    "TVcineEditField": 0.01,
+    "LLRxyzEditField": [
+      0,
+      0.05
+    ],
+    "TVdynEditField": 0.001,
+    "ESPIRiTCheckBox": [
+      0,
+      1
+    ],
+    "RingRmCheckBox": 0,
+    "NLMFCheckBox": 1
+  },
+  "multiEchoReco": {
+    "FramesEditField": 12,
+    "DynamicsEditField": 1,
+    "SharingEditField": 0,
+    "WVxyzEditField": 0.002,
+    "TVxyzEditField": 0,
+    "TVcineEditField": 0.01,
+    "LLRxyzEditField": [
+      0,
+      0.05
+    ],
+    "TVdynEditField": 0,
+    "ESPIRiTCheckBox": [
+      0,
+      1
+    ],
+    "RingRmCheckBox": 0,
+    "NLMFCheckBox": 0
+  },
+  "gdTable": [
+    [
+      25,
+      14
+    ],
+    [
+      50,
+      32
+    ],
+    [
+      75,
+      32
+    ],
+    [
+      100,
+      40
+    ],
+    [
+      150,
+      16
+    ],
+    [
+      200,
+      20
+    ],
+    [
+      400,
+      10
+    ],
+    [
+      500,
+      8
+    ],
+    [
+      800,
+      5
+    ],
+    [
+      1000,
+      4
+    ],
+    [
+      2000,
+      2
+    ],
+    [
+      4000,
+      1
+    ]
+  ],
+  "trainNumbers": [
+    "m1",
+    "m2",
+    "m3",
+    "m4",
+    "m6"
+  ],
+  "checkpoints": [
+    "50000",
+    "50000",
+    "50000",
+    "50000",
+    "50000"
+  ],
+  "neededModules": [
+    "tensorboard",
+    "tensorboard-data-server",
+    "imageio",
+    "matplotlib",
+    "matplotlib-inline",
+    "opencv-python",
+    "scikit-image",
+    "pillow",
+    "h5py",
+    "torch",
+    "torchvision",
+    "torchmetrics",
+    "tqdm",
+    "pandas",
+    "scipy",
+    "opencv-python",
+    "interval",
+    "unzip",
+    "python",
+    "nibabel",
+    "tensorboard"
+  ],
+  "totalVariation": "T",
+  "maxImageValue": 32767,
+  "maxKspaceValue": 32767,
+  "ignoreFiles": [
+    "cardtrigpoints",
+    "resptrigpoints",
+    "respwindow",
+    "heartrate",
+    "resprate",
+    "recoparameters",
+    "recoparmeters",
+    "retro",
+    "p2roud",
+    "retroData"
+  ]
+}
