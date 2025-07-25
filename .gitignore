@@ -18,3 +18,6 @@ tmp/Inbox — g.j.strijkers@amsterdamumc.nl.pdf
 /windows_standalone_installer/beta
 functions/denoise/NLMFdenoise/NLMF.m
 *.c
+functions/settings/readSettingsFile.m
+functions/settings/makeDefaultSettings.m
+functions/settings/makeLogFile.m
