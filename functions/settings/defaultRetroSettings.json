@@ -18,6 +18,25 @@
   "web2": "/blob/main/appversion.txt",
   "flashShiftVersion": 639,
   "flashExternalNavVersion": 710,
+  "regEntriesDcm": [
+    [
+      "HKEY_LOCAL_MACHINE",
+      "Software\\MRS\\MRSClinicalUI\\Scan",
+      "DicomExportExe"
+    ],
+    [
+      "HKEY_LOCAL_MACHINE",
+      "Software\\MRS\\MRSClinicalUI\\Scan",
+      "DevRootDirectory"
+    ]
+  ],
+  "regEntriesSur": [
+    [
+      "HKEY_LOCAL_MACHINE",
+      "Software\\MRS\\MRSClinicalUI\\Scan",
+      "BaseStorageDirectory"
+    ]
+  ],
   "AImodule": false,
   "maxNumCores": 8,
   "brightred": "Red",
