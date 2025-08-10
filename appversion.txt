@@ -1,1 +1,1 @@
-retrospective_version=10.2.4
+retrospective_version=10.2.5

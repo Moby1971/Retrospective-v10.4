@@ -186,7 +186,9 @@
       1
     ],
     "RingRmCheckBox": 0,
-    "NLMFCheckBox": 0
+    "NLMFCheckBox": 0,
+    "ZeroFillCheckBox": 1,
+    "TukeyFilterCheckBox": 1
   },
   "systolicReco": {
     "FramesEditField": 15,
@@ -209,7 +211,9 @@
       1
     ],
     "RingRmCheckBox": 0,
-    "NLMFCheckBox": 0
+    "NLMFCheckBox": 0,
+    "ZeroFillCheckBox": 1,
+    "TukeyFilterCheckBox": 1
   },
   "diastolicReco": {
     "FramesEditField": 32,
@@ -232,7 +236,9 @@
       1
     ],
     "RingRmCheckBox": 0,
-    "NLMFCheckBox": 0
+    "NLMFCheckBox": 0,
+    "ZeroFillCheckBox": 1,
+    "TukeyFilterCheckBox": 1
   },
   "respirationReco": {
     "FramesEditField": 32,
@@ -255,7 +261,9 @@
       1
     ],
     "RingRmCheckBox": 0,
-    "NLMFCheckBox": 0
+    "NLMFCheckBox": 0,
+    "ZeroFillCheckBox": 1,
+    "TukeyFilterCheckBox": 1
   },
   "realtimeReco": {
     "FramesEditField": 2,
@@ -274,7 +282,9 @@
       1
     ],
     "RingRmCheckBox": 0,
-    "NLMFCheckBox": 1
+    "NLMFCheckBox": 0,
+    "ZeroFillCheckBox": 1,
+    "TukeyFilterCheckBox": 1
   },
   "vfaReco": {
     "FramesEditField": 6,
@@ -293,7 +303,9 @@
       1
     ],
     "RingRmCheckBox": 0,
-    "NLMFCheckBox": 1
+    "NLMFCheckBox": 0,
+    "ZeroFillCheckBox": 1,
+    "TukeyFilterCheckBox": 1
   },
   "multiEchoReco": {
     "FramesEditField": 12,
@@ -312,7 +324,9 @@
       1
     ],
     "RingRmCheckBox": 0,
-    "NLMFCheckBox": 0
+    "NLMFCheckBox": 0,
+    "ZeroFillCheckBox": 1,
+    "TukeyFilterCheckBox": 1
   },
   "gdTable": [
     [
