@@ -18,3 +18,4 @@ functions/settings/readSettingsFile.m
 functions/settings/makeDefaultSettings.m
 functions/settings/makeLogFile.m
 tests/
+*.pyc
