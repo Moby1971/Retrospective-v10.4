@@ -188,7 +188,10 @@
     "RingRmCheckBox": 0,
     "NLMFCheckBox": 0,
     "ZeroFillCheckBox": 1,
-    "TukeyFilterCheckBox": 1
+    "TukeyFilterCheckBox": 1,
+    "ZTEDeadTimeEditField": 14,
+    "ZTEShiftEditField": 4,
+    "ZTEFullEchoCheckBox": 0
   },
   "systolicReco": {
     "FramesEditField": 15,
@@ -213,7 +216,10 @@
     "RingRmCheckBox": 0,
     "NLMFCheckBox": 0,
     "ZeroFillCheckBox": 1,
-    "TukeyFilterCheckBox": 1
+    "TukeyFilterCheckBox": 1,
+    "ZTEDeadTimeEditField": 14,
+    "ZTEShiftEditField": 4,
+    "ZTEFullEchoCheckBox": 0
   },
   "diastolicReco": {
     "FramesEditField": 32,
@@ -238,7 +244,10 @@
     "RingRmCheckBox": 0,
     "NLMFCheckBox": 0,
     "ZeroFillCheckBox": 1,
-    "TukeyFilterCheckBox": 1
+    "TukeyFilterCheckBox": 1,
+    "ZTEDeadTimeEditField": 14,
+    "ZTEShiftEditField": 4,
+    "ZTEFullEchoCheckBox": 0
   },
   "respirationReco": {
     "FramesEditField": 32,
@@ -263,7 +272,10 @@
     "RingRmCheckBox": 0,
     "NLMFCheckBox": 0,
     "ZeroFillCheckBox": 1,
-    "TukeyFilterCheckBox": 1
+    "TukeyFilterCheckBox": 1,
+    "ZTEDeadTimeEditField": 14,
+    "ZTEShiftEditField": 4,
+    "ZTEFullEchoCheckBox": 0
   },
   "realtimeReco": {
     "FramesEditField": 2,
@@ -284,7 +296,10 @@
     "RingRmCheckBox": 0,
     "NLMFCheckBox": 0,
     "ZeroFillCheckBox": 1,
-    "TukeyFilterCheckBox": 1
+    "TukeyFilterCheckBox": 1,
+    "ZTEDeadTimeEditField": 14,
+    "ZTEShiftEditField": 4,
+    "ZTEFullEchoCheckBox": 0
   },
   "vfaReco": {
     "FramesEditField": 6,
@@ -305,7 +320,10 @@
     "RingRmCheckBox": 0,
     "NLMFCheckBox": 0,
     "ZeroFillCheckBox": 1,
-    "TukeyFilterCheckBox": 1
+    "TukeyFilterCheckBox": 1,
+    "ZTEDeadTimeEditField": 14,
+    "ZTEShiftEditField": 4,
+    "ZTEFullEchoCheckBox": 0
   },
   "multiEchoReco": {
     "FramesEditField": 12,
@@ -326,7 +344,10 @@
     "RingRmCheckBox": 0,
     "NLMFCheckBox": 0,
     "ZeroFillCheckBox": 1,
-    "TukeyFilterCheckBox": 1
+    "TukeyFilterCheckBox": 1,
+    "ZTEDeadTimeEditField": 14,
+    "ZTEShiftEditField": 4,
+    "ZTEFullEchoCheckBox": 0
   },
   "gdTable": [
     [
