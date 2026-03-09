@@ -1,0 +1,107 @@
+default:
+  # Number of iterations to use for the RIM network
+  niteration : 8
+  # Number of cpu threads to use for preparing data batches
+  num-workers : 8
+  # Device to use, should be cuda or cpu
+  device : cuda
+
+train:
+  # Path to folder to create for training, or path to trained network when validating
+  train-dir: /scratch/dmvandenberg/DRIM_models/6x/
+  # Path to data set. Folder should contain subfolder train containing folders with subjects to train on. When validating, this path should point directly to the subject tested on.
+  data-dir: /data/projects/esaote/Cardiac_rodents/h5Files/fully_sampled/train/
+  undersampled_data_dir: /data/projects/esaote/Cardiac_rodents/h5Files/6x/Train/
+  checkpoint : 65000
+  # Number of cpu threads to use for preparing data batches
+  num-workers: 8
+  # Device to use, should be cuda or cpu
+  device: cuda
+  # learning rate
+  lr : 0.0001
+  # learning rate will be updated after this many epochs
+  milestones : 2 5 10 20
+  # learning rate will be multiplied by this factor as epochs in milestones are reached
+  gamma : 0.5
+  # Number of epochs to train for
+  nepoch : 40
+  # Truncates backpropagation after this many iterations of the total niteration used
+  truncate : 4
+  # Prints loss to output after this many training iterations
+  print-freq : 100
+  # Creates a checkpoint after this many training iterations, storing network parameters
+  checkpoint-freq : 100
+  batch-size : 1
+  # Trains for this many hours
+  time-limit : 48
+  # Number of features to use in network
+  nfeature : 128
+  # sizes of kernels to use for convolutional layers. Each digit in the 3 digit blocks represent the kernel size along one axis, in the order TxDxW. Changing None to 3 digit blocks adds anothes convolutional layer to the network.
+  kernel : 313 None None
+  # When on, T-axis is convolved also within recurrent layer
+  temporal-rnn : True
+  # Number of dynamics to use
+  ndynamic : 32
+  # Range within acceleration rates are sampled
+  acceleration : 2
+  # range within which lowest frequency voxels are kept, and not subsampled
+  center-scale : 0.015
+  # crop along W-axis.
+  crop : 100
+  # range within full width half maximum is picked for gaussian sampling kernel
+  fwhms : 0.6
+  # Range within which partial fourier sampling is used
+  partial-fourier : 0.6
+   # When off, dynamics are sorted into respiratory bins prior to reconstruction
+  # sorted : off
+  # autocast so that half precision is used
+  autocast : False
+  # When set to auto, the axes not processed by the network contain independent training samples
+  independent-sample-dims : auto
+  # axes for which fourier transform is applied within log likelihood gradient. -1 means W-axis.
+  fourier-dim : -1
+  # nbin : 32imspace_undersampled_mask
+  volume-slices :
+  bin-slices :
+  validation-freq : 9900
+  min-max-checkpoint :
+  # Number of iterations to use for the RIM network
+  niteration: 8
+
+
+validate:
+  data-dir: /data/projects/esaote/Cardiac_rodents/h5Files/fully_sampled/train/
+  val-data-dir: /data/projects/esaote/Cardiac_rodents/h5Files/fully_sampled/val/
+  val-undersampled-data-dir: /data/projects/esaote/Cardiac_rodents/h5Files/6x/Val/
+  batch-size : 1
+  checkpoint-freq : 13000
+  device: cuda
+  num-workers: 8
+  metrics : nrmse ssim psnr
+  test :
+  min-max-checkpoint :
+  acceleration : 10.0
+  fwhm : 0.7
+  center-scale : 0.02
+  partial-fourier : 0.666
+  ndynamic :
+  perslicescore : no
+  volume-slices :
+  #16 5 12 20 6
+  bin-slices :
+  #6 4 5 2 7
+  randomize-bins : False
+  sorted : off
+  nbin : 32
+  ssim-win-size : 7
+  crop : 100
+  checkpoint : 65000
+
+reconstruct:
+  batch-size: 1
+  num-workers: 8
+  test-data-dir: /data/projects/esaote/Cardiac_rodents/matlabFiles/DataReordered/100/test/
+  test-undersampled-data-dir: /data/projects/esaote/Cardiac_rodents/matlabFiles/
+  checkpoint: 202500
+  model-dir: /scratch/dmvandenberg/DRIM_models/DRIM_Models/2x/
+  save_recons: /scratch/dmvandenberg/DRIM_models/TEST/
