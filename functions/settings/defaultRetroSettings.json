@@ -28,7 +28,7 @@
       "BaseStorageDirectory"
     ]
   ],
-  "AImodule": true,
+  "AImodule": false,
   "maxNumCores": 8,
   "brightred": "Red",
   "red": "#D95319",
