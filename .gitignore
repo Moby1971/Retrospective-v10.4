@@ -19,3 +19,4 @@ functions/settings/makeDefaultSettings.m
 functions/settings/makeLogFile.m
 tests/
 *.pyc
+functions/autoreco/mrdAutoRecoManager.m
