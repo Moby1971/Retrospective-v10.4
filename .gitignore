@@ -20,3 +20,4 @@ functions/settings/makeLogFile.m
 tests/
 *.pyc
 functions/autoreco/mrdAutoRecoManager.m
+retrospective10.mlapp.bak
