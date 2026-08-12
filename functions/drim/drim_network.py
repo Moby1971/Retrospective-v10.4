@@ -113,6 +113,38 @@ class RecurrentInferenceMachine(L.LightningModule):
         x, hidden = self.drim_block(x, hidden)
         return x, hidden
 
+    # -----------------------------------------------------------------------------
+    # Progress reporting
+    #
+    # The MATLAB app runs this script as a background process and polls a small text
+    # file to drive its progress gauge. The log file cannot be used for this: Lightning
+    # renders its progress bar with `rich`, which detects that the output is not a
+    # terminal and buffers the whole bar until the process exits.
+    #
+    # One unit of progress is one RIM iteration on one slice, so the gauge also moves
+    # for single slice scans, where there is only a single batch.
+    # -----------------------------------------------------------------------------
+    PROGRESS_FILENAME = 'retroAIdrim.progress'
+
+    def _write_progress(self, fraction):
+        # Written to a temporary file and then renamed, because os.replace is atomic:
+        # MATLAB polls once a second and must never read a half written file.
+        if not getattr(self, 'progress_path', None):
+            return
+        try:
+            temporary_path = self.progress_path + '.tmp'
+            with open(temporary_path, 'w') as progress_file:
+                progress_file.write('%.4f\n' % min(1.0, max(0.0, fraction)))
+            os.replace(temporary_path, self.progress_path)
+        except OSError:
+            # Progress reporting is cosmetic and must never abort a reconstruction.
+            pass
+
+    def _report_progress_step(self):
+        self.progress_done_steps += 1
+        if self.progress_total_steps > 0:
+            self._write_progress(self.progress_done_steps / self.progress_total_steps)
+
     def on_test_epoch_start(self):
         # Buffer for the reconstructed slices, keyed by subject (i.e. by .mat filename).
         # Reset here rather than in __init__ so that a second run starts clean.
@@ -120,6 +152,26 @@ class RecurrentInferenceMachine(L.LightningModule):
         # The normalisation factor the data sampler divided by, also keyed by subject, so
         # that it can be written out next to the reconstruction.
         self.test_scales = {}
+
+        # Set up progress reporting. sys.argv[3] is the folder the app asked the
+        # reconstruction to be written to, the same folder it polls.
+        self.progress_path = os.path.join(sys.argv[3], self.PROGRESS_FILENAME)
+        self.progress_done_steps = 0
+
+        # num_test_batches is a list with one entry per dataloader in current Lightning
+        # versions and a plain number in older ones, so both are accepted. It is the
+        # number of slices here, since the reconstruction runs with batch size 1.
+        total_batches = getattr(self.trainer, 'num_test_batches', 0)
+        if isinstance(total_batches, (list, tuple)):
+            total_batches = total_batches[0] if total_batches else 0
+        try:
+            total_batches = int(total_batches)
+        except (TypeError, ValueError, OverflowError):
+            # float('inf') for an iterable dataset of unknown length.
+            total_batches = 0
+
+        self.progress_total_steps = total_batches * self.niterations
+        self._write_progress(0.0)
 
     def test_step(self, batch):
         # Load data
@@ -158,6 +210,9 @@ class RecurrentInferenceMachine(L.LightningModule):
             # moveaxis(1, -1) puts the real/imaginary axis back at the end.
             estimate = estimate + estimate_step.moveaxis(1, -1)
 
+            # One iteration finished, tell the app how far along the reconstruction is.
+            self._report_progress_step()
+
         # Save lines of the same image together based on the subject name
         # Slices arrive one at a time and are collected per subject, to be concatenated in
         # on_test_epoch_end. Appending to a list is used rather than concatenating here,
@@ -171,6 +226,8 @@ class RecurrentInferenceMachine(L.LightningModule):
         return
 
     def on_test_epoch_end(self):
+        # All iterations are done; what remains is assembling and saving.
+        self._write_progress(1.0)
         for scan in self.test_outputs:
             # Add slices together in one array
             # Stack the per slice results back into one array, move it to the CPU, read it
