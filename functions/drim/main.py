@@ -1,62 +1,195 @@
+"""Aangepast door Daisy van den Berg, originele code van Kai Lønning van paper Dynamic recurrent
+Inference machines for accelerated MRI-guided radiotherapy of the liver."""
+
+# =====================================================================================
+# ENTRY POINT FOR DRIM RECONSTRUCTION
+# =====================================================================================
+#
+# This script is the command line entry point that the MATLAB Retrospective app calls to
+# reconstruct undersampled MRI data with a trained DRIM network (Dynamic Recurrent
+# Inference Machine). It is a *reconstruction only* script: no training happens here, the
+# network weights are read from a checkpoint that was trained elsewhere.
+#
+# The overall flow is:
+#
+#   1. Read the yaml configuration file given on the command line.
+#   2. Build a DataLoader over the k-space data that MATLAB just wrote to disk
+#      (data_sampler.MRData reads 'retroAItemp.mat').
+#   3. Restore the trained network from a .ckpt checkpoint file.
+#   4. Run one pass over the data with a Lightning Trainer. The network writes the
+#      reconstructed images back to disk as 'retroAItemp_DRIM.mat', which MATLAB reads.
+#
+# Note that Lightning's terminology is used throughout: reconstruction is executed as a
+# "test" pass (trainer.test), because from Lightning's point of view we are running a
+# trained model over data without computing gradients. There is no test *metric* here.
+#
+# The heavy lifting lives in the sibling modules:
+#   data_sampler.py  - reads the .mat file and serves one slice at a time
+#   drim_network.py  - the LightningModule: iteration loop and saving of the result
+#   drim_layers.py   - the actual network layers (conv blocks, recurrent units, gradient)
+# =====================================================================================
+
+import yaml
+import lightning as L
+from torch.utils.data import DataLoader, Dataset
+import drim_network
+from data_sampler import MRData
 import sys
 import os
-import yaml
 import logging
-from train.logger import setup as log_setup
-from train.training import train_model
-from reconstruction.reconstruction import reconstruct
+import warnings
 
-logger = logging.getLogger(__name__)
+# -------------------------------------------------------------------------------------
+# Console output clean-up.
+#
+# Lightning prints two promotional "tips" suggesting its paid cloud products. They are
+# emitted through the logging module at INFO level, and there is no configuration flag to
+# turn them off. Rather than raising the log level (which would also hide genuinely useful
+# lines such as "GPU available: True (mps), used: True"), a filter is attached that drops
+# only the records beginning with the light bulb marker.
+# -------------------------------------------------------------------------------------
+# Hide Lightning's promotional tips, but keep the informative lines (GPU available, ...)
+logging.getLogger("lightning.pytorch.utilities.rank_zero").addFilter(
+    lambda record: not record.getMessage().lstrip().startswith("\N{ELECTRIC LIGHT BULB} Tip:"))
+# -------------------------------------------------------------------------------------
+# Two warnings are filtered out because neither can be acted upon from this code base:
+#   - "LeafSpec is deprecated" is raised inside Lightning itself, where it calls a torch
+#     API that a newer torch version has deprecated. It disappears when Lightning updates.
+#   - "Consider setting persistent_workers=True" only helps when a DataLoader is iterated
+#     over multiple epochs, so that its worker processes can be reused. Reconstruction
+#     runs exactly one pass, so there is nothing to reuse them for.
+# -------------------------------------------------------------------------------------
+# Hide warnings we cannot act on: a deprecation inside lightning itself, and a suggestion that
+# does not apply here (persistent_workers only helps across epochs, reconstruction runs one).
+warnings.filterwarnings("ignore", message=".*LeafSpec.*")
+warnings.filterwarnings("ignore", message=".*persistent_workers.*")
+
+# -------------------------------------------------------------------------------------
+# Command line arguments (all four are required, and are passed by the MATLAB app).
+# The original Dutch comments are kept below; in English they read:
+#
+#   argv[1] = directory holding the model checkpoint, e.g. .../functions/drim/m2/
+#   argv[2] = directory holding the input data, i.e. where retroAItemp.mat was written
+#   argv[3] = directory to save the reconstruction into
+#   argv[4] = name (full path) of the yaml configuration file
+#
+# argv[2] and argv[3] are usually the same temporary folder. Note that these are read
+# straight from sys.argv deep inside the functions below rather than being passed as
+# parameters, so the module can only be driven from the command line, not imported and
+# called with arbitrary paths.
+# -------------------------------------------------------------------------------------
+# argv[1] = directory waar model staat
+# argv[2] = directory waar data staat
+# argv[3] = directory om recon op te slaan
+# argv[4] = naam yaml file
 
 
-def training(config):
-    # Create new folder to save training
-    traindir = config['train']['train-dir']
-    if os.path.exists(traindir):
-        num = 2
-        traindir = config['train']['train-dir'] + f'training_{num}'
-        while os.path.exists(traindir):
-            num += 1
-            traindir = config['train']['train-dir'] + f'training_{num}'
-    config['train']['train-dir'] = traindir
-    # Make a folder for the logs and one for the network parameters
-    os.makedirs(os.path.join(traindir, 'logs'))
-    os.mkdir(os.path.join(traindir, 'network-parameters'))
+def parse_kernel(kernel_str):
+    """Convert kernel string into a list format."""
+    # The yaml file stores the convolution kernels as one compact string, for example
+    # "333 None None". Each whitespace separated token describes one convolution layer:
+    #
+    #   "333"  -> a 3x3x3 kernel, given as the list [3, 3, 3] over (time, depth, width)
+    #   "None" -> no convolution layer in that position
+    #
+    # Because each digit is read individually, only single digit kernel sizes can be
+    # expressed with this notation (a kernel of 10 could not be written down).
+    # The result is the list-of-lists that the network constructor expects, e.g.
+    # [[3, 3, 3], None, None].
+    return [None if k == 'None' else [int(x) for x in k] for k in kernel_str.split()]
 
-    log_setup(
-        True,
-        os.path.join(traindir, 'logs', 'train_run_log.txt'),
-        log_level=logging.INFO)
-    logger.info(f"Storing train run in {config['train']['train-dir']}")
 
-    # start training
-    train_model(config)
-    logger.info("Finished training!")
+def resolve_num_workers(config):
+    """Number of dataloader workers, never more than the machine has cores."""
+    # The yaml value is treated as an upper bound rather than an exact count, so that a
+    # single configuration file can be shared across machines of different sizes. PyTorch
+    # itself never checks the core count: asking for more workers than there are cores
+    # simply oversubscribes the CPU and slows everything down, so the value is clamped.
+    requested = int(config['default']['num-workers'])
+    # os.cpu_count() can return None in some virtualised environments; fall back to 1.
+    available = os.cpu_count() or 1
+    # max(0, ...) guards against a negative value in the yaml, which the DataLoader would
+    # otherwise reject. 0 is a valid setting and means "load in the main process".
+    return max(0, min(requested, available))
+
+
+def load_test_data(config):
+    """Prepare data in dataloader"""
+    # Where MATLAB wrote retroAItemp.mat (argv[2], see the header comment above).
+    data_directory = sys.argv[2]
+    # MRData reads and pre-processes the whole file up front in its constructor, so this
+    # single line performs the zero filling, the inverse Fourier transform and the
+    # normalisation. Afterwards the dataset serves one slice per index.
+    dataset = MRData(data_directory, config['default']['volume'])
+    num_workers = resolve_num_workers(config)
+    # Printed so that it is visible in the log which value a given machine actually used,
+    # rather than only what the yaml requested.
+    print(f"Dataloader workers: {num_workers} (requested {config['default']['num-workers']}, "
+          f"{os.cpu_count()} cores available)")
+    # drop_last=False matters here: every slice must be reconstructed, so a final partial
+    # batch may not be silently discarded the way it often is during training.
+    test_loader = DataLoader(dataset, batch_size= config['default']['batch-size'], drop_last=False,
+        num_workers=num_workers)
+    return test_loader
+
+
+def test_model(config):
+    """Initialize and test the RIM model."""
+    # Load data
+    test_dataloader = load_test_data(config)
+
+    # Load DRIM model
+    kernel = parse_kernel(config['default']['kernel'])
+    # argv[1] is the folder of the selected model (m1 ... m6), one folder per
+    # undersampling factor. Each folder holds a single .ckpt file.
+    checkpoint_path = sys.argv[1]
+    # os.listdir returns entries in an arbitrary, filesystem dependent order, so the
+    # listing is filtered by extension and sorted. Without this, a stray file synced into
+    # the folder (.DS_Store on macOS, Thumbs.db or desktop.ini on Windows, a Dropbox
+    # conflict copy) could be picked up and handed to the checkpoint loader.
+    # Only consider checkpoint files, so that stray files (.DS_Store, Thumbs.db, ...) are ignored
+    checkpoint_files = sorted(f for f in os.listdir(checkpoint_path) if f.endswith('.ckpt'))
+    # Fail early and clearly. Without this check the error would surface much later and
+    # far less legibly, from inside torch's unpickling machinery.
+    if not checkpoint_files:
+        raise FileNotFoundError(f"No .ckpt file found in {checkpoint_path}")
+    # os.path.join rather than string concatenation, so that the caller does not have to
+    # supply a trailing separator and so that Windows backslashes are handled correctly.
+    checkpoint = os.path.join(checkpoint_path, checkpoint_files[0])
+    # Number of RIM iterations: how often the network refines its own estimate. More
+    # iterations generally means a better reconstruction at a proportionally higher cost.
+    niterations = config['default']['niteration']
+    # The architecture arguments must match those the checkpoint was trained with,
+    # otherwise the stored weights will not fit the layers being created. nfeature=128
+    # is therefore hard coded rather than read from the yaml file.
+    model = drim_network.RecurrentInferenceMachine.load_from_checkpoint(checkpoint_path=checkpoint, nfeature=128, kernel=kernel,
+                                                               temporal_rnn=True, niterations=niterations)
+    # Attach the configuration to the model so the LightningModule can reach it later.
+    model.config = config
+
+    # Start reconstruction
+    # accelerator comes from the yaml 'device' key: 'cuda', 'mps', 'cpu', or 'auto' to let
+    # Lightning select the best device present on this machine.
+    # precision="16-mixed" runs the convolutions in half precision for speed and memory;
+    # on CPU Lightning silently substitutes bfloat16, because fp16 autocast is unsupported.
+    # logger=False disables Lightning's metric logging, which would only write empty files.
+    trainer = L.Trainer(accelerator=config['default']['device'], precision="16-mixed", logger=False)
+    print("Start reconstructing...")
+    # Runs one pass over every slice. The reconstruction is written to disk from inside
+    # the model's on_test_epoch_end hook, so nothing needs to be returned here.
+    trainer.test(model, test_dataloader)
     return
 
 
-def testing(config):
-    logger.info('Reconstructing...')
-    reconstruct(config)
-    return
-
-
+# Only run when executed as a script. This guard is not merely stylistic: on Windows and
+# macOS the DataLoader starts its worker processes with the "spawn" method, which re-imports
+# this module in every worker. Without the guard, each worker would start a full
+# reconstruction of its own.
 if __name__ == "__main__":
-    if '-h' in sys.argv or '--help' in sys.argv:
-        print(
-            "Script contains two different programs:"
-            "\t1) train: train a network."
-            "\t2) reconstruct: reconstruct data using a pre-trained network."
-            "For more details, specify which program you need help with.")
-
+    config_file = sys.argv[4]
     # Load hyperparameters in yaml file
-    yaml_file = sys.argv[6]
-    with open(yaml_file, 'r') as file:
+    # safe_load (rather than load) parses only plain yaml types and will not instantiate
+    # arbitrary Python objects named in the file.
+    with open(config_file, 'r') as file:
         config_params = yaml.safe_load(file)
-
-    if sys.argv[1] == 'train':
-        training(config_params)
-    elif sys.argv[1] == 'reconstruct':
-        testing(config_params)
-    else:
-        print("Option not available. Options are train or reconstruct.")
+    test_model(config_params)

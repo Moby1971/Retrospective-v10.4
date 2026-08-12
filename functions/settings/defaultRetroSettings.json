@@ -28,7 +28,7 @@
       "BaseStorageDirectory"
     ]
   ],
-  "AImodule": false,
+  "AImodule": true,
   "maxNumCores": 8,
   "brightred": "Red",
   "red": "#D95319",
@@ -398,11 +398,11 @@
     "m6"
   ],
   "checkpoints": [
-    "514800",
-    "514800",
-    "201000",
-    "202500",
-    "207900"
+    "m1",
+    "m2",
+    "m3",
+    "m4",
+    "m6"
   ],
   "neededModules": [
     "tensorboard",
@@ -413,10 +413,12 @@
     "opencv-python",
     "scikit-image",
     "pillow",
+    "lightning",
     "h5py",
     "torch",
     "torchvision",
     "torchmetrics",
+    "pytorch-lightning",
     "tqdm",
     "pandas",
     "scipy",
