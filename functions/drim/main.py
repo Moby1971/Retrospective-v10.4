@@ -30,6 +30,7 @@ Inference machines for accelerated MRI-guided radiotherapy of the liver."""
 # =====================================================================================
 
 import yaml
+import torch
 import lightning as L
 from torch.utils.data import DataLoader, Dataset
 import drim_network
@@ -99,8 +100,8 @@ def parse_kernel(kernel_str):
     return [None if k == 'None' else [int(x) for x in k] for k in kernel_str.split()]
 
 
-def resolve_num_workers(config):
-    """Number of dataloader workers, never more than the machine has cores."""
+def resolve_num_workers(config, n_samples):
+    """Number of dataloader workers: never more than cores, never more than samples."""
     # The yaml value is treated as an upper bound rather than an exact count, so that a
     # single configuration file can be shared across machines of different sizes. PyTorch
     # itself never checks the core count: asking for more workers than there are cores
@@ -108,9 +109,59 @@ def resolve_num_workers(config):
     requested = int(config['default']['num-workers'])
     # os.cpu_count() can return None in some virtualised environments; fall back to 1.
     available = os.cpu_count() or 1
-    # max(0, ...) guards against a negative value in the yaml, which the DataLoader would
-    # otherwise reject. 0 is a valid setting and means "load in the main process".
-    return max(0, min(requested, available))
+    # The dataset serves one slice per index, so a worker beyond the number of slices has
+    # nothing at all to fetch. That is not free: on macOS and Windows workers are started
+    # with "spawn", so each one re-imports this module and pays the module level imports,
+    # which is about 400 MB of torch and lightning per process. Single slice mouse data is
+    # one sample, and the unclamped value would start twelve processes to serve it, none
+    # of which does any work. The whole cost is paid again on every call, and the app calls
+    # this script once per coil per dynamic.
+    #
+    # The data itself is not what the workers were costing: MRData puts its tensors in
+    # shared memory precisely so that spawning does not copy them. It is the interpreter
+    # and the imports that are per process and cannot be shared.
+    return max(0, min(requested, available, int(n_samples)))
+
+
+def resolve_precision(device):
+    """Trainer precision for a given accelerator setting.
+
+    "16-mixed" is what we want everywhere: on cuda it is the point of the exercise, and on
+    cpu it is harmless because lightning substitutes bfloat16, fp16 autocast being
+    unsupported there.
+
+    mps is the exception, and only on older torch. Up to roughly torch 2.5 the mps autocast
+    implementation cast the weights of the first Conv3d but not of the ones that followed,
+    so the second convolution in any Sequential was handed a half input while its own bias
+    was still float and raised
+
+        Input type (c10::Half) and bias type (float) should be the same
+
+    The network is built almost entirely from stacked Conv3d layers, so that made mixed
+    precision unusable there. It is fixed in current torch (verified on 2.13), and falling
+    back to fp32 anyway is expensive rather than merely cautious: on an Apple machine the
+    GPU shares its memory with the rest of the system, so doubling the activations of a
+    seven iteration RIM over a volume drives the whole machine into swap.
+
+    So the bug is probed for rather than assumed. One tiny two-layer forward pass on the
+    device answers the question in a few milliseconds, against a reconstruction measured in
+    minutes, and the answer is right on both old and new torch. 'auto' is resolved here
+    rather than left to lightning, because on an Apple machine lightning picks mps and this
+    function has to know that is where it will land.
+    """
+    if device == 'mps' or (device == 'auto' and not torch.cuda.is_available()
+                           and torch.backends.mps.is_available()):
+        try:
+            probe = torch.nn.Sequential(torch.nn.Conv3d(2, 4, 3),
+                                        torch.nn.Conv3d(4, 4, 3)).to('mps')
+            with torch.autocast('mps', dtype=torch.float16):
+                probe(torch.randn(1, 2, 6, 8, 8, device='mps'))
+        except Exception as error:
+            # Anything at all going wrong here means fp32, including a torch that cannot
+            # autocast on mps in some way this probe did not anticipate.
+            print(f"mps half precision unusable ({error}), falling back to fp32")
+            return "32-true"
+    return "16-mixed"
 
 
 def load_test_data(config):
@@ -121,11 +172,11 @@ def load_test_data(config):
     # single line performs the zero filling, the inverse Fourier transform and the
     # normalisation. Afterwards the dataset serves one slice per index.
     dataset = MRData(data_directory, config['default']['volume'])
-    num_workers = resolve_num_workers(config)
+    num_workers = resolve_num_workers(config, len(dataset))
     # Printed so that it is visible in the log which value a given machine actually used,
-    # rather than only what the yaml requested.
+    # rather than only what the yaml requested, and which of the three limits bound it.
     print(f"Dataloader workers: {num_workers} (requested {config['default']['num-workers']}, "
-          f"{os.cpu_count()} cores available)")
+          f"{os.cpu_count()} cores available, {len(dataset)} sample(s) to serve)")
     # drop_last=False matters here: every slice must be reconstructed, so a final partial
     # batch may not be silently discarded the way it often is during training.
     test_loader = DataLoader(dataset, batch_size= config['default']['batch-size'], drop_last=False,
@@ -170,10 +221,15 @@ def test_model(config):
     # Start reconstruction
     # accelerator comes from the yaml 'device' key: 'cuda', 'mps', 'cpu', or 'auto' to let
     # Lightning select the best device present on this machine.
-    # precision="16-mixed" runs the convolutions in half precision for speed and memory;
-    # on CPU Lightning silently substitutes bfloat16, because fp16 autocast is unsupported.
+    # "16-mixed" runs the convolutions in half precision for speed and memory; on CPU
+    # Lightning silently substitutes bfloat16, because fp16 autocast is unsupported. On mps
+    # mixed precision is broken for stacked Conv3d, so resolve_precision falls back to fp32
+    # there; see the note in that function.
     # logger=False disables Lightning's metric logging, which would only write empty files.
-    trainer = L.Trainer(accelerator=config['default']['device'], precision="16-mixed", logger=False)
+    device = config['default']['device']
+    precision = resolve_precision(device)
+    print(f"Device: {device}, precision: {precision}")
+    trainer = L.Trainer(accelerator=device, precision=precision, logger=False)
     print("Start reconstructing...")
     # Runs one pass over every slice. The reconstruction is written to disk from inside
     # the model's on_test_epoch_end hook, so nothing needs to be returned here.

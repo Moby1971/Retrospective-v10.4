@@ -217,6 +217,15 @@ class RecurrentInferenceMachine(L.LightningModule):
         # Slices arrive one at a time and are collected per subject, to be concatenated in
         # on_test_epoch_end. Appending to a list is used rather than concatenating here,
         # because repeated concatenation would copy the whole array every time.
+        #
+        # Moved off the accelerator as it is produced, not at the end. The result is
+        # destined for the CPU either way, so keeping it on the device buys nothing and
+        # costs a peak that grows with every slice: a stack held there in full while the
+        # next slice is being reconstructed. On an Apple machine that memory is the same
+        # memory the rest of the system is using, so the growth is felt everywhere, not
+        # just here.
+        estimate = estimate.cpu()
+
         if subject in self.test_outputs:
             list_estimate = self.test_outputs[subject]
             list_estimate.append(estimate)
@@ -230,9 +239,11 @@ class RecurrentInferenceMachine(L.LightningModule):
         self._write_progress(1.0)
         for scan in self.test_outputs:
             # Add slices together in one array
-            # Stack the per slice results back into one array, move it to the CPU, read it
-            # as complex again and take the magnitude: the phase is discarded, since the
-            # app displays magnitude images.
+            # Stack the per slice results back into one array, read it as complex again
+            # and take the magnitude: the phase is discarded, since the app displays
+            # magnitude images. The .cpu() is a no-op now that test_step moves each slice
+            # off the accelerator as it is produced; it is kept so this line is still
+            # correct on its own terms if that ever changes back.
             estimate = torch.abs(torch.view_as_complex(torch.cat(self.test_outputs[scan], dim=0).cpu()))
             # Transpose to dimensions (time, slices, y, x)
             # MATLAB expects the time axis first. The second np.abs is redundant, since

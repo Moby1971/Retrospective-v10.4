@@ -19,6 +19,7 @@ functions/settings/makeDefaultSettings.m
 functions/settings/makeLogFile.m
 tests/
 *.pyc
+__pycache__/
 functions/autoreco/mrdAutoRecoManager.m
 retrospective10.mlapp.bak
 /manuals
