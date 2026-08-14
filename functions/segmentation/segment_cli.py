@@ -226,9 +226,16 @@ def from_model_grid(labels, offsets, resampled_shape, original_shape):
     # invent classes that the model never predicted
     resized = zoom(restored, factors, order=0)
 
-    # zoom can land one pixel short or long from rounding, so force the shape
-    fixed, _ = fit_to_size(resized, max(original_shape))
-    return fixed[:original_shape[0], :original_shape[1]].astype(np.uint8)
+    # zoom can land one pixel short or long from rounding, so force the shape.
+    # Each axis is forced to its own target: fit_to_size takes a single size and so
+    # goes through a square, which on a non-square image pads the short axis on both
+    # sides and then shifts every label by half that padding. It cancels out when the
+    # image is square, which is why this survived until a 256 x 128 acquisition.
+    fixed = np.zeros(original_shape, dtype=resized.dtype)
+    rows = min(resized.shape[0], original_shape[0])
+    columns = min(resized.shape[1], original_shape[1])
+    fixed[:rows, :columns] = resized[:rows, :columns]
+    return fixed.astype(np.uint8)
 
 
 def main():
