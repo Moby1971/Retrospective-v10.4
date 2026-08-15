@@ -8,6 +8,18 @@
 # environment means two CUDA stacks that fight: installing tensorflow[and-cuda]
 # pulls an nvidia-nccl version that torch pins against, and pip can only warn.
 #
+# These pins install on python 3.11 through 3.13, and the app picks an
+# interpreter in that range to build the environment on. Below it numpy and
+# onnxruntime have no wheel, above it scipy has none, and in both cases pip
+# says only that no matching distribution exists. The same range is stated in
+# retro.pythonVersionRange, which is what the app actually enforces; change the
+# two together.
+#
+# A machine with no python in that range does not stop here: the app makes one
+# with conda, or downloads a self-contained build, or asks homebrew, whichever
+# it finds first. The pinned release and its checksums live in
+# retro.standalonePythonSources.
+#
 # Versions are pinned so that every machine resolves the same way and a future
 # user gets what was actually tested, rather than whatever pip prefers that
 # month. Raise them deliberately, not by accident.
