@@ -45,10 +45,12 @@ manuals/*.pages
 # .m stays local. Regenerate this list after p-coding a new source, or after
 # moving one -- an entry naming a file that has moved silently stops ignoring
 # anything, and the source gets committed.
++retro/+io/addDcmExtension.m
 +retro/+io/adjustDicomGroupLength.m
 +retro/+io/collectHorosRois.m
 +retro/+io/defaultSettings.m
 +retro/+io/deleteIfPresent.m
++retro/+io/dicomSourceCandidates.m
 +retro/+io/exportDicomDcm.m
 +retro/+io/exportDicomMat.m
 +retro/+io/exportGif.m
@@ -58,9 +60,12 @@ manuals/*.pages
 +retro/+io/exportSegmentationResults.m
 +retro/+io/exportToMatFile.m
 +retro/+io/findBytePattern.m
++retro/+io/findDicomSource.m
++retro/+io/gifExportFolder.m
 +retro/+io/hexToRgb16.m
 +retro/+io/importMRD.m
 +retro/+io/isFolderNewer.m
++retro/+io/isWritableFolder.m
 +retro/+io/jsonSetting.m
 +retro/+io/makeLogFile.m
 +retro/+io/newMrdParameters.m
@@ -134,6 +139,7 @@ manuals/*.pages
 +retro/+reco/partialDerivative3D.m
 +retro/+traj/trajApplyDelays.m
 +retro/+traj/trajInterpolation.m
++retro/+util/angularGaps.m
 +retro/+util/calculatePlaneIntersection.m
 +retro/+util/calculatePlaneMidlineProjection.m
 +retro/+util/centredWindow.m
@@ -141,6 +147,7 @@ manuals/*.pages
 +retro/+util/circtukey2D.m
 +retro/+util/circtukey3D.m
 +retro/+util/circularMedianFilter.m
++retro/+util/countMeasuredSpokes.m
 +retro/+util/denoise.m
 +retro/+util/dominantFrequency.m
 +retro/+util/fft2Dmri.m
@@ -156,6 +163,8 @@ manuals/*.pages
 +retro/+util/im2row2D.m
 +retro/+util/im2row3D.m
 +retro/+util/image2Dshift.m
++retro/+util/intervalBand.m
++retro/+util/intervalMask.m
 +retro/+util/longestCurve.m
 +retro/+util/lvContours.m
 +retro/+util/maskContour.m
@@ -188,5 +197,6 @@ functions/export/niftii/dicm_img.m
 functions/export/niftii/dicm_save.m
 functions/export/niftii/nii_tool.m
 gui/adapters/AppReporter.m
+gui/adapters/askForFolder.m
 gui/adapters/gatherRecoParams.m
 gui/adapters/mrdAutoRecoManager.m
