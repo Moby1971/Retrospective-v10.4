@@ -61,13 +61,16 @@ manuals/*.pages
 +retro/+io/exportToMatFile.m
 +retro/+io/findBytePattern.m
 +retro/+io/findDicomSource.m
++retro/+io/findSurFolder.m
 +retro/+io/gifExportFolder.m
 +retro/+io/hexToRgb16.m
 +retro/+io/importMRD.m
 +retro/+io/isFolderNewer.m
 +retro/+io/isWritableFolder.m
 +retro/+io/jsonSetting.m
++retro/+io/latestReleaseVersion.m
 +retro/+io/makeLogFile.m
++retro/+io/mrdImportFolder.m
 +retro/+io/newMrdParameters.m
 +retro/+io/pruneLogFiles.m
 +retro/+io/readGradDelays.m
@@ -77,6 +80,8 @@ manuals/*.pages
 +retro/+io/replaceDicomUi.m
 +retro/+io/retiredSettings.m
 +retro/+io/setSopInstanceUid.m
++retro/+io/sliceGeometry.m
++retro/+io/surCandidates.m
 +retro/+io/surToDcm.m
 +retro/+io/writeDataToMrd.m
 +retro/+io/writeHorosRoiFile.m
@@ -165,6 +170,7 @@ manuals/*.pages
 +retro/+util/image2Dshift.m
 +retro/+util/intervalBand.m
 +retro/+util/intervalMask.m
++retro/+util/isVersionNewer.m
 +retro/+util/longestCurve.m
 +retro/+util/lvContours.m
 +retro/+util/maskContour.m
