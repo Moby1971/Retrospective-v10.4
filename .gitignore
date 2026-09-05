@@ -194,6 +194,7 @@ manuals/*.pages
 +retro/Reporter.m
 +retro/asParams.m
 +retro/defaultRecoParams.m
++retro/pcodeTarget.m
 @retroData/retroData.m
 functions/denoise/NLMFdenoise/NLMF.m
 functions/export/niftii/dicm2nii.m
