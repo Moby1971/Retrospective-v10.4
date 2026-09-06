@@ -164,6 +164,195 @@ def resolve_precision(device):
     return "16-mixed"
 
 
+# How much memory one reconstruction needs, and how much this machine has
+#
+# The network is a fixed architecture -- 128 features, seven iterations, batch of one --
+# so its peak is a fixed multiple of one feature map, and a feature map is
+#
+#     nfeature * frames * height * width * 4 bytes
+#
+# Measured on this Mac over four sizes, in a fresh process each time so the allocator
+# cache did not carry over, the peak is linear in that unit with a fixed offset:
+#
+#     unit  96 MiB -> 3.79 GiB      unit 160 MiB -> 5.31 GiB
+#     unit 240 MiB -> 7.34 GiB      unit 512 MiB -> 14.66 GiB (reported by a user's OOM)
+#
+# A least squares fit to the first three predicts the fourth, on a different machine,
+# within 4 %. The constants below are that fit. They are specific to this network: change
+# nfeature, the iteration count or the kernels and they have to be measured again.
+FEATURE_MAP_MULTIPLE = 25.5      # peak, in feature maps
+FIXED_OVERHEAD_BYTES = 1.4 * 1024 ** 3   # weights, workspace and allocator slack
+
+# What fraction of the device budget a reconstruction may plan to use.
+#
+# Not 1.0, and not close to it. The figure the estimate produces is the network's own
+# allocations; the OOM that prompted this also reported 3.55 GiB of "other allocations"
+# beside them, and the shared pool fragments, so the run that failed was refused a 512 MiB
+# block while the reported numbers still summed to less than the limit. Two thirds leaves
+# room for both and still admits everything that has ever worked here.
+USABLE_FRACTION = 0.66
+
+# The fewest cardiac frames the network can be given.
+#
+# The temporal convolutions are dilated, and the dilation doubles along the block: 1, 1, 2,
+# 4. At dilation 4 a kernel of 3 needs four frames of wrap-around padding on each side, and
+# CyclicPad1d builds that padding by SLICING -- input[:, :, -n:] -- which silently returns
+# fewer than n frames when the axis is shorter than n. So below four frames the input is
+# quietly under-padded and the convolution fails on a shape mismatch several layers later,
+# with a message naming a kernel size the yaml never mentions.
+#
+# Measured rather than derived: 1, 2 and 3 frames each fail, 4 and everything above pass.
+# The spatial axes have no such minimum, since they are padded by replication; 1 x 1 runs.
+MIN_FRAMES = 4
+
+# What this script writes into the log when the reconstruction cannot be attempted, as
+# opposed to attempted and failed. The app looks for this line and reports the sentence
+# after it on its own, instead of the tail of a traceback: not being able to run is a fact
+# about the data and the machine, not a fault, and it should not read like a crash.
+#
+# retro.python.reportCannotReconstruct holds the same string on the MATLAB side.
+CANNOT_RECONSTRUCT = 'RETRO-CANNOT-RECONSTRUCT'
+
+
+class CannotReconstruct(Exception):
+    """The reconstruction cannot be attempted, with the reason in the message."""
+
+
+def estimate_peak_bytes(frames, height, width, nfeature=128):
+    """Peak device memory one slice of this network needs, in bytes."""
+    unit = nfeature * frames * height * width * 4
+    return FEATURE_MAP_MULTIPLE * unit + FIXED_OVERHEAD_BYTES
+
+
+def resolve_device(device):
+    """The accelerator that will actually be used, with 'auto' resolved."""
+    if device != 'auto':
+        return device
+    if torch.cuda.is_available():
+        return 'cuda'
+    if torch.backends.mps.is_available():
+        return 'mps'
+    return 'cpu'
+
+
+def device_budget_bytes(device):
+    """How much memory the accelerator will let this process have, in bytes.
+
+    Returns 0 when the answer is not knowable, which the caller reads as "do not judge".
+
+    mps reports the same number the out of memory message calls "max allowed", and it is
+    machine specific: 11.84 GiB on a 16 GB Mac against 20.13 GiB on the machine whose
+    failure is quoted above, so it has to be asked on the machine that will run. cuda is
+    asked for FREE memory rather than total, since the display and every other process
+    have already taken their share.
+    """
+    try:
+        if device == 'cuda' and torch.cuda.is_available():
+            free, _total = torch.cuda.mem_get_info()
+            return int(free)
+        if device == 'mps' and torch.backends.mps.is_available():
+            return int(torch.mps.recommended_max_memory())
+    except Exception as error:
+        print(f"Could not read the {device} memory budget ({error}), continuing without the check")
+        return 0
+
+    # cpu: the limit is system memory, which psutil knows and the standard library does
+    # not on every platform. Absent it, decline to judge rather than guess.
+    try:
+        import psutil
+        return int(psutil.virtual_memory().available)
+    except Exception:
+        return 0
+
+
+def sample_dimensions(dataset):
+    """(frames, height, width) of one sample, as the network will see it."""
+    # Taken from the data rather than from the yaml, because volume=False cuts the same
+    # array along a different axis and the sample is then a different shape.
+    estimate = dataset[0]['estimate']
+    shape = tuple(estimate.shape)
+    if len(shape) != 3:
+        return None
+    return shape
+
+
+def check_memory(config, dataset):
+    """Refuse the reconstruction if it will not fit on the accelerator.
+
+    The check is here, and not in the app, because only this process knows both the shape
+    the network will actually see and what the accelerator will allow. The app can only
+    guess at the first and cannot see the second at all.
+
+    Refusing rather than moving to the processor is deliberate. The processor finishes, but
+    for a volume of this size it takes long enough that a user waiting on it is worse served
+    than one told immediately to reconstruct fewer frames or to use a larger machine. The
+    exception is a machine with no accelerator at all: there the processor is not a fallback,
+    it is the only thing there is, so the estimate is reported as a warning and the
+    reconstruction proceeds.
+    """
+    device = resolve_device(config['default']['device'])
+    dims = sample_dimensions(dataset)
+
+    if dims is None:
+        return device
+
+    frames, height, width = dims
+
+    if frames < MIN_FRAMES:
+        raise CannotReconstruct(
+            f"The deep learning reconstruction needs at least {MIN_FRAMES} cardiac frames "
+            f"and this one has {frames}. Its temporal filters are dilated by up to "
+            f"{MIN_FRAMES}, so a shorter cycle cannot be padded. Reconstruct more frames, "
+            f"or use one of the other reconstruction methods.")
+
+    needed = estimate_peak_bytes(frames, height, width)
+    budget = device_budget_bytes(device)
+    gib = 1024 ** 3
+
+    # Said whenever the processor is what will run, not only when memory is short. It is
+    # the slow path however it was arrived at, and a user watching a progress gauge that
+    # has barely moved is owed the reason.
+    if device == 'cpu':
+        print("WARNING: no accelerator in use, reconstructing on the processor. "
+              "This takes considerably longer than a GPU run.")
+
+    print(f"Reconstructing {frames} frames of {height} x {width}: "
+          f"estimated peak {needed / gib:.1f} GiB")
+
+    if budget <= 0:
+        print("Device memory budget unknown, proceeding")
+        return device
+
+    usable = USABLE_FRACTION * budget
+    print(f"Device budget {budget / gib:.1f} GiB, of which {usable / gib:.1f} GiB is planned for")
+
+    if needed <= usable:
+        return device
+
+    if device == 'cpu':
+        # No accelerator on this machine, so there is nothing to refuse in favour of.
+        print(f"WARNING: this reconstruction needs about {needed / gib:.1f} GiB and about "
+              f"{budget / gib:.1f} GiB is free. It may fail or drive the machine into swap.")
+        return device
+
+    # The message is the last line of the traceback, which is what the app shows, so it
+    # carries the numbers and what to do about them rather than only the fact.
+    fits = max(1, int(usable_frames(usable, height, width)))
+    raise CannotReconstruct(
+        f"Not enough memory for the deep learning reconstruction. {frames} frames at "
+        f"{height} x {width} need about {needed / gib:.1f} GB, and this machine offers "
+        f"about {budget / gib:.1f} GB to {device}, of which {usable / gib:.1f} GB can be "
+        f"planned for. About {fits} frames would fit here. The matrix is not a lever: "
+        f"data_sampler refills every scan onto {height} x {width} whatever was acquired, so "
+        f"the frame count is what decides this, along with how much memory the machine has.")
+
+
+def usable_frames(usable_bytes, height, width, nfeature=128):
+    """How many frames would fit in a given budget, at this matrix size."""
+    per_frame = FEATURE_MAP_MULTIPLE * nfeature * height * width * 4
+    return (usable_bytes - FIXED_OVERHEAD_BYTES) / per_frame
+
+
 def load_test_data(config):
     """Prepare data in dataloader"""
     # Where MATLAB wrote retroAItemp.mat (argv[2], see the header comment above).
@@ -226,7 +415,16 @@ def test_model(config):
     # mixed precision is broken for stacked Conv3d, so resolve_precision falls back to fp32
     # there; see the note in that function.
     # logger=False disables Lightning's metric logging, which would only write empty files.
-    device = config['default']['device']
+    # The device asked for in the yaml, unless the reconstruction will not fit on it. The
+    # dataset is reached through the loader rather than passed separately, so the shape
+    # judged is the one the loader will actually serve.
+    try:
+        device = check_memory(config, test_dataloader.dataset)
+    except CannotReconstruct as why:
+        # Printed and returned, not raised. The app reads this line and says only the
+        # sentence; raising here would give it a traceback to show instead.
+        print(f"{CANNOT_RECONSTRUCT}: {why}")
+        return
     precision = resolve_precision(device)
     print(f"Device: {device}, precision: {precision}")
     trainer = L.Trainer(accelerator=device, precision=precision, logger=False)

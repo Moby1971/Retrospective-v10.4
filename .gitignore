@@ -81,6 +81,7 @@ manuals/*.pages
 +retro/+io/retiredSettings.m
 +retro/+io/setSopInstanceUid.m
 +retro/+io/sliceGeometry.m
++retro/+io/uniformOrientation.m
 +retro/+io/surCandidates.m
 +retro/+io/surToDcm.m
 +retro/+io/writeDataToMrd.m
@@ -176,6 +177,12 @@ manuals/*.pages
 +retro/+util/maskContour.m
 +retro/+util/matchArrayOrientation.m
 +retro/+util/matchImageOrientation.m
++retro/+util/kSpaceCentre.m
++retro/+util/drimPeakMemory.m
++retro/+util/drimMinFrames.m
++retro/+util/drimModelMatrix.m
++retro/+util/dicomOrientation.m
++retro/+python/reportCannotReconstruct.m
 +retro/+util/maxn.m
 +retro/+util/peakFinder.m
 +retro/+util/refineExtremum.m
