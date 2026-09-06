@@ -72,6 +72,7 @@ manuals/*.pages
 +retro/+io/makeLogFile.m
 +retro/+io/mrdImportFolder.m
 +retro/+io/newMrdParameters.m
++retro/+io/patientPosition.m
 +retro/+io/pruneLogFiles.m
 +retro/+io/readGradDelays.m
 +retro/+io/readSettingsFile.m
@@ -177,6 +178,7 @@ manuals/*.pages
 +retro/+util/maskContour.m
 +retro/+util/matchArrayOrientation.m
 +retro/+util/matchImageOrientation.m
++retro/+util/imagePosition.m
 +retro/+util/kSpaceCentre.m
 +retro/+util/drimPeakMemory.m
 +retro/+util/drimMinFrames.m
