@@ -219,3 +219,4 @@ gui/adapters/AppReporter.m
 gui/adapters/askForFolder.m
 gui/adapters/gatherRecoParams.m
 gui/adapters/mrdAutoRecoManager.m
+pcodeAll.m

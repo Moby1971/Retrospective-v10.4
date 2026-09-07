@@ -119,7 +119,34 @@ def load_segmenter(folder):
 
     session = ort.InferenceSession(onnxPath, providers=preferred)
     inputName = session.get_inputs()[0].name
-    used = session.get_providers()[0] if session.get_providers() else "unknown"
+    active = session.get_providers()
+    used = active[0] if active else "unknown"
+
+    # Say when the processor is what will run, and which of the two reasons it is.
+    #
+    # onnxruntime falls back silently: a build without the CUDA provider and a build whose
+    # CUDA provider fails to initialise both end up on the processor, and the only trace is
+    # this one line in the log. The run still finishes -- the segmentation is a 2D network
+    # over one batch per cardiac frame, so it is a matter of minutes rather than the hours
+    # a processor reconstruction would take -- but a user watching a progress bar crawl is
+    # owed the reason.
+    #
+    # There is deliberately no memory check here, unlike the reconstruction in
+    # functions/drim/main.py. That one plans tens of gigabytes and has to decide in advance
+    # whether the machine can carry it. This batches n_slices images of MODEL_SIZE squared:
+    # a few megabytes in, tens of megabytes across the five deep supervision heads, well
+    # under a gigabyte all told. No accelerator has ever been short of that, so a gate would
+    # only be a new way to refuse work that runs.
+    if used == "CPUExecutionProvider":
+        accelerators = [p for p in ort.get_available_providers()
+                        if p in ("CUDAExecutionProvider", "CoreMLExecutionProvider")]
+        if accelerators:
+            print("WARNING: onnxruntime has %s but fell back to the processor for the "
+                  "segmentation. It still completes, but takes considerably longer."
+                  % ", ".join(accelerators), flush=True)
+        else:
+            print("WARNING: no accelerator available to onnxruntime, segmenting on the "
+                  "processor. This takes considerably longer than a GPU run.", flush=True)
 
     def predict(images):
         batch = np.stack([normalize(im) for im in np.asarray(images)])[..., None]

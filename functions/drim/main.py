@@ -192,6 +192,28 @@ FIXED_OVERHEAD_BYTES = 1.4 * 1024 ** 3   # weights, workspace and allocator slac
 # room for both and still admits everything that has ever worked here.
 USABLE_FRACTION = 0.66
 
+# USABLE_FRACTION decides only whether a run will stay ON the card, quietly. It is no longer
+# what decides whether the run is allowed at all -- see check_memory.
+#
+# Two things forced that apart. On Windows the GPU is virtualised by WDDM: allocations that
+# do not fit in the card's own memory are paged into system RAM, the pool Task Manager calls
+# "Shared GPU memory" and caps at half of physical RAM. CUDA cannot see it -- cudaMemGetInfo,
+# and so torch.cuda.mem_get_info, reports the device only -- so a budget taken from the
+# device alone understates a Windows machine by tens of gigabytes.
+#
+# And the estimate itself is UNVALIDATED ON CUDA. The constants above were fitted against
+# Metal, on an Apple machine, and never measured against the CUDA allocator running
+# 16-mixed. There is direct evidence they are far too high there: a 32 frame reconstruction
+# completed on a TITAN Xp with 10.9 GB of device memory free, while this model predicts it
+# needs 26.9 GB. That is at least 2.7x pessimistic, and roughly a factor of two of it is
+# explained by precision alone.
+#
+# Refusing a reconstruction on a model that is known to be wrong, in the direction of
+# refusing work that demonstrably runs, is the worst of the options. So on cuda the estimate
+# now warns and the run proceeds, and only a request beyond every pool the machine has is
+# refused outright. Once a real CUDA peak has been measured -- see PEAK_REPORT below -- the
+# constants can be refitted for that backend and the check tightened again on evidence.
+
 # The fewest cardiac frames the network can be given.
 #
 # The temporal convolutions are dilated, and the dilation doubles along the block: 1, 1, 2,
@@ -212,6 +234,10 @@ MIN_FRAMES = 4
 #
 # retro.python.reportCannotReconstruct holds the same string on the MATLAB side.
 CANNOT_RECONSTRUCT = 'RETRO-CANNOT-RECONSTRUCT'
+
+# Marks the line carrying what a cuda run actually cost. Grep the logs for it to collect the
+# measurements the CUDA constants have to be refitted from.
+PEAK_REPORT = 'RETRO-PEAK'
 
 
 class CannotReconstruct(Exception):
@@ -265,6 +291,98 @@ def device_budget_bytes(device):
         return 0
 
 
+def windows_physical_bytes():
+    """Physical RAM of the Windows host in bytes, or 0 when it cannot be established.
+
+    Three ways, most authoritative first, because the answer decides how much work the
+    machine is allowed to attempt and returning 0 makes the caller strict again.
+
+    1. Native Windows: GlobalMemoryStatusEx, straight from the kernel. Uses ctypes rather
+       than psutil so it cannot fail for want of a package.
+    2. WSL with interop: ask the host through powershell. /proc/meminfo inside WSL describes
+       the VM, not the machine, so the host has to be asked rather than assumed.
+    3. WSL without working interop: fall back on the VM's own MemTotal. WSL2 defaults the VM
+       to half the host's RAM, so this reads about half of the true figure -- and half is
+       also what Windows caps the shared pool at, so MemTotal happens to approximate the
+       shared pool directly. The caller halves what this returns, so the fallback doubles
+       first to keep one contract. Marked as an estimate because .wslconfig can change the
+       VM size and then this is wrong in whichever direction it was changed.
+    """
+    if sys.platform == 'win32':
+        try:
+            import ctypes
+
+            class MemoryStatusEx(ctypes.Structure):
+                _fields_ = [('dwLength', ctypes.c_ulong),
+                            ('dwMemoryLoad', ctypes.c_ulong),
+                            ('ullTotalPhys', ctypes.c_ulonglong),
+                            ('ullAvailPhys', ctypes.c_ulonglong),
+                            ('ullTotalPageFile', ctypes.c_ulonglong),
+                            ('ullAvailPageFile', ctypes.c_ulonglong),
+                            ('ullTotalVirtual', ctypes.c_ulonglong),
+                            ('ullAvailVirtual', ctypes.c_ulonglong),
+                            ('ullAvailExtendedVirtual', ctypes.c_ulonglong)]
+
+            status = MemoryStatusEx()
+            status.dwLength = ctypes.sizeof(MemoryStatusEx)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                return int(status.ullTotalPhys)
+        except Exception as error:
+            print(f"Could not read physical memory from Windows ({error})")
+        return 0
+
+    try:
+        with open('/proc/version', 'rt') as handle:
+            if 'microsoft' not in handle.read().lower():
+                return 0
+    except OSError:
+        return 0
+
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+             '(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory'],
+            capture_output=True, text=True, timeout=30)
+        physical = int(result.stdout.strip())
+        if physical > 0:
+            return physical
+    except Exception as error:
+        print(f"Could not ask Windows for its physical memory ({error}), "
+              f"estimating from the WSL virtual machine instead")
+
+    try:
+        with open('/proc/meminfo', 'rt') as handle:
+            for line in handle:
+                if line.startswith('MemTotal:'):
+                    # kB in the file; doubled because WSL2 defaults to half the host
+                    return int(line.split()[1]) * 1024 * 2
+    except Exception:
+        pass
+
+    return 0
+
+
+def shared_pool_bytes():
+    """The Windows shared GPU memory ceiling in bytes, or 0 when it does not apply.
+
+    Only Windows pages GPU allocations into system RAM this way. WDDM lets an allocation that
+    does not fit in the card's own memory live in system RAM instead, and Windows caps that
+    pool at half of physical memory -- the figure Task Manager shows as "Shared GPU memory",
+    31.8 GB on a 64 GB machine. It is where a 32 frame reconstruction on a 10 GB card gets
+    the room to run.
+
+    CUDA cannot see any of it: cudaMemGetInfo, and so torch.cuda.mem_get_info, reports the
+    device only. A budget taken from the device alone therefore understates a Windows machine
+    by tens of gigabytes, which is what made this check refuse reconstructions that run.
+
+    Returns 0 on anything that is not Windows, which is the honest answer: Linux and macOS
+    have no such pool and the device budget is the whole of it.
+    """
+    physical = windows_physical_bytes()
+    return physical // 2 if physical > 0 else 0
+
+
 def sample_dimensions(dataset):
     """(frames, height, width) of one sample, as the network will see it."""
     # Taken from the data rather than from the yaml, because volume=False cuts the same
@@ -306,7 +424,14 @@ def check_memory(config, dataset):
             f"or use one of the other reconstruction methods.")
 
     needed = estimate_peak_bytes(frames, height, width)
-    budget = device_budget_bytes(device)
+    onDevice = device_budget_bytes(device)
+
+    # What the machine can actually give this reconstruction. On Windows that is the card
+    # plus the shared pool WDDM will page into, and the two together are what decides how
+    # many frames are possible: a 10 GB card on a 64 GB machine offers about 42 GB, not 10.
+    # Everywhere else there is no such pool and the device is the whole budget.
+    spill = shared_pool_bytes() if device == 'cuda' else 0
+    budget = onDevice + spill
     gib = 1024 ** 3
 
     # Said whenever the processor is what will run, not only when memory is short. It is
@@ -324,9 +449,27 @@ def check_memory(config, dataset):
         return device
 
     usable = USABLE_FRACTION * budget
-    print(f"Device budget {budget / gib:.1f} GiB, of which {usable / gib:.1f} GiB is planned for")
+    onCardPlan = USABLE_FRACTION * onDevice
+
+    if spill > 0:
+        print(f"Memory available to {device}: {onDevice / gib:.1f} GiB on the card plus "
+              f"{spill / gib:.1f} GiB of shared system memory, {budget / gib:.1f} GiB in "
+              f"total, of which {usable / gib:.1f} GiB is planned for "
+              f"(about {max(1, int(usable_frames(usable, height, width)))} frames)")
+    else:
+        print(f"Device budget {budget / gib:.1f} GiB, of which {usable / gib:.1f} GiB is "
+              f"planned for "
+              f"(about {max(1, int(usable_frames(usable, height, width)))} frames)")
 
     if needed <= usable:
+        # It fits, but say so when part of it will be borrowed from system memory: that
+        # memory is reached across PCIe and the run is slower for it.
+        if spill > 0 and needed > onCardPlan:
+            onCard = max(1, int(usable_frames(onCardPlan, height, width)))
+            print(f"NOTE: about {onCard} frames would stay on the card; beyond that the "
+                  f"reconstruction borrows shared system memory and runs more slowly. The "
+                  f"estimate is fitted on Apple hardware and overstates CUDA, so it may "
+                  f"well stay on the card after all.")
         return device
 
     if device == 'cpu':
@@ -335,16 +478,47 @@ def check_memory(config, dataset):
               f"{budget / gib:.1f} GiB is free. It may fail or drive the machine into swap.")
         return device
 
+    # Past the planned fraction, but not necessarily past what the machine has. On cuda the
+    # run is allowed up to the whole budget, card plus shared pool, and only refused beyond
+    # it. Two reasons, both evidence rather than caution.
+    #
+    # The estimate is UNVALIDATED ON CUDA: its constants were fitted against Metal and never
+    # measured against the CUDA allocator running 16-mixed. A 32 frame reconstruction
+    # completed on a TITAN Xp with 10.9 GB free while this model predicts 26.9 GB, so it is
+    # at least 2.7x pessimistic there. And WDDM pages what does not fit into the shared pool
+    # rather than failing, so being over the card is not the same as being out of memory.
+    #
+    # Refusing on a model known to be wrong, in the direction of refusing work that
+    # demonstrably runs, is the worst of the options.
+    if device == 'cuda' and needed <= budget:
+        onCard = max(1, int(usable_frames(onCardPlan, height, width)))
+        if spill > 0:
+            print(f"WARNING: this reconstruction is estimated at {needed / gib:.1f} GiB, "
+                  f"more than the {usable / gib:.1f} GiB planned for out of "
+                  f"{budget / gib:.1f} GiB. Proceeding: it fits within the card plus its "
+                  f"shared system memory, so it should complete, more slowly than a run "
+                  f"that stays on the card. About {onCard} frames would stay on the card. "
+                  f"The estimate is fitted on Apple hardware and overstates CUDA, so it may "
+                  f"well use less than this.")
+        else:
+            print(f"WARNING: this reconstruction is estimated at {needed / gib:.1f} GiB "
+                  f"against {usable / gib:.1f} GiB planned for. Proceeding anyway: the "
+                  f"estimate is fitted on Apple hardware and overstates CUDA. It may still "
+                  f"run out of memory, in which case reconstruct fewer frames.")
+        return device
+
     # The message is the last line of the traceback, which is what the app shows, so it
     # carries the numbers and what to do about them rather than only the fact.
-    fits = max(1, int(usable_frames(usable, height, width)))
+    fits = max(1, int(usable_frames(budget, height, width)))
+    pools = (f"{onDevice / gib:.1f} GB on the card and {spill / gib:.1f} GB shared"
+             if spill > 0 else f"{budget / gib:.1f} GB")
     raise CannotReconstruct(
         f"Not enough memory for the deep learning reconstruction. {frames} frames at "
         f"{height} x {width} need about {needed / gib:.1f} GB, and this machine offers "
-        f"about {budget / gib:.1f} GB to {device}, of which {usable / gib:.1f} GB can be "
-        f"planned for. About {fits} frames would fit here. The matrix is not a lever: "
-        f"data_sampler refills every scan onto {height} x {width} whatever was acquired, so "
-        f"the frame count is what decides this, along with how much memory the machine has.")
+        f"about {budget / gib:.1f} GB to {device} ({pools}). About {fits} frames would fit "
+        f"here. The matrix is not a lever: data_sampler refills every scan onto "
+        f"{height} x {width} whatever was acquired, so the frame count is what decides this, "
+        f"along with how much memory the machine has.")
 
 
 def usable_frames(usable_bytes, height, width, nfeature=128):
@@ -431,7 +605,34 @@ def test_model(config):
     print("Start reconstructing...")
     # Runs one pass over every slice. The reconstruction is written to disk from inside
     # the model's on_test_epoch_end hook, so nothing needs to be returned here.
+    if device == 'cuda' and torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+
     trainer.test(model, test_dataloader)
+
+    # What it actually cost, against what was predicted.
+    #
+    # This is the measurement the estimate needs and has never had on CUDA: its constants
+    # were fitted against Metal. Printed on every cuda run so that the log of any successful
+    # reconstruction carries the datum, rather than requiring someone to instrument the file
+    # and reproduce the case. Frames, matrix, predicted and actual are all on the one line,
+    # which is everything a refit needs.
+    #
+    # max_memory_allocated is torch's own high water mark, so it counts the tensors and not
+    # the driver context or the allocator's unused reserve; that is the same quantity the
+    # Metal figures were read as, so the two are comparable.
+    if device == 'cuda' and torch.cuda.is_available():
+        gib = 1024 ** 3
+        dims = sample_dimensions(test_dataloader.dataset)
+        peak = torch.cuda.max_memory_allocated() / gib
+        if dims is not None:
+            frames, height, width = dims
+            predicted = estimate_peak_bytes(frames, height, width) / gib
+            print(f"{PEAK_REPORT}: {frames} frames at {height} x {width}, "
+                  f"peak {peak:.2f} GiB, predicted {predicted:.2f} GiB, "
+                  f"ratio {peak / predicted:.2f}")
+        else:
+            print(f"{PEAK_REPORT}: peak {peak:.2f} GiB")
     return
 
 
