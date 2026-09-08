@@ -175,6 +175,7 @@ manuals/*.pages
 +retro/+util/im2row3D.m
 +retro/+util/image2Dshift.m
 +retro/+util/imagePosition.m
++retro/+util/cropOversampling.m
 +retro/+util/intervalBand.m
 +retro/+util/intervalMask.m
 +retro/+util/isVersionNewer.m
