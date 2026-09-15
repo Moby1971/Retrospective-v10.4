@@ -168,6 +168,7 @@ manuals/*.pages
 +retro/+util/foldDynamicsIntoFrames.m
 +retro/+util/fracCircShift.m
 +retro/+util/gauss.m
++retro/+util/githubRawAddress.m
 +retro/+util/gyro.m
 +retro/+util/ifft2Dmri.m
 +retro/+util/ifft3Dmri.m
@@ -197,7 +198,6 @@ manuals/*.pages
 +retro/+util/rotz.m
 +retro/+util/row2im2D.m
 +retro/+util/row2im3D.m
-+retro/+util/senseMapDisplayMask.m
 +retro/+util/settingOr.m
 +retro/+util/sliceSpacing.m
 +retro/+util/squarePixel.m
@@ -226,3 +226,5 @@ backup/before-tar-check_2026-09-15/+retro/+python/createPythonEnvironment.m
 backup/before-tar-check_2026-09-15/+retro/+python/explainSetupFailure.m
 backup/before-tar-check_2026-09-15/+retro/+python/pythonSetupMarkers.m
 backup/before-tar-check_2026-09-15/tests/runUnitTests.m
+backup/retired-sense-mask_2026-09-15/+retro/+util/senseMapDisplayMask.m
+backup/retired-sense-mask_2026-09-15/tests/tSenseMapMask.m
