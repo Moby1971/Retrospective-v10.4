@@ -226,3 +226,51 @@ gui/adapters/askForFolder.m
 gui/adapters/gatherRecoParams.m
 gui/adapters/mrdAutoRecoManager.m
 pcodeAll.m
+
+# Code P-coded on 2026-09-15 that had shipped as source: three +retro/+util functions, the
+# BART interface, the nufft code with its @nufft_3d class, and the recomat code with its
+# old-style @Emat_yxt, @Emat_zyxt, @TVOP and @TVOP3D classes. The .p beside each ships; the
+# .m stays local. trajectoryTools/ stays source: those are example scripts to read and edit.
++retro/+util/bandProminence.m
++retro/+util/respirationPeaksUp.m
++retro/+util/zeroPhaseFilter.m
+functions/bart/WSLPathCorrection.m
+functions/bart/bart.m
+functions/bart/readcfl.m
+functions/bart/writecfl.m
+functions/nufft/@nufft_3d/aNUFT.m
+functions/nufft/@nufft_3d/deap.m
+functions/nufft/@nufft_3d/density.m
+functions/nufft/@nufft_3d/fNUFT.m
+functions/nufft/@nufft_3d/iNUFT.m
+functions/nufft/@nufft_3d/kernel.m
+functions/nufft/@nufft_3d/nufft_3d.m
+functions/nufft/@nufft_3d/pruno.m
+functions/nufft/@nufft_3d/sake.m
+functions/nufft/DWT.m
+functions/nufft/fraccircshift.m
+functions/nufft/pcgL1.m
+functions/nufft/pcgpc.m
+functions/recomat/@Emat_yxt/Emat_yxt.m
+functions/recomat/@Emat_yxt/ctranspose.m
+functions/recomat/@Emat_yxt/mtimes.m
+functions/recomat/@Emat_zyxt/Emat_zyxt.m
+functions/recomat/@Emat_zyxt/ctranspose.m
+functions/recomat/@Emat_zyxt/mtimes.m
+functions/recomat/@TVOP/TVOP.m
+functions/recomat/@TVOP/ctranspose.m
+functions/recomat/@TVOP/mtimes.m
+functions/recomat/@TVOP/private/D.m
+functions/recomat/@TVOP/private/adjD.m
+functions/recomat/@TVOP/times.m
+functions/recomat/@TVOP3D/TVOP3D.m
+functions/recomat/@TVOP3D/ctranspose.m
+functions/recomat/@TVOP3D/mtimes.m
+functions/recomat/@TVOP3D/private/D.m
+functions/recomat/@TVOP3D/private/adjD.m
+functions/recomat/@TVOP3D/times.m
+functions/recomat/CSL1NlCg.m
+functions/recomat/fft2c_mri.m
+functions/recomat/fft3c_mri.m
+functions/recomat/ifft2c_mri.m
+functions/recomat/ifft3c_mri.m
