@@ -1,1 +1,2 @@
-![retrospective10UI](https://github.com/user-attachments/assets/31b426e9-1572-4499-9b7f-72726fe0e188)
+<img width="1381" height="910" alt="retrospective" src="https://github.com/user-attachments/assets/c6499ce0-c9c7-4fc7-b638-ada3b09b53b3" />
+
