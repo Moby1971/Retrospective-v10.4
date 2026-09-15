@@ -34,6 +34,10 @@ functions/denoise/NLMFdenoise/source/
 retrospective10.mlapp.bak
 STATUS.md
 
+# The local backups made before each change, excluded whole: they are copies of
+# files that are committed in their own place, and belong to this machine only.
+backup/
+
 # The manuals themselves are committed. Only the Pages source of the app manual
 # is not: it is the 13 MB editable original, and the PDF exported from it beside
 # it is the one people read.
@@ -222,10 +226,3 @@ gui/adapters/askForFolder.m
 gui/adapters/gatherRecoParams.m
 gui/adapters/mrdAutoRecoManager.m
 pcodeAll.m
-backup/before-tar-check_2026-09-15/+retro/+python/createPythonEnvironment.m
-backup/before-tar-check_2026-09-15/+retro/+python/explainSetupFailure.m
-backup/before-tar-check_2026-09-15/+retro/+python/pythonSetupMarkers.m
-backup/before-tar-check_2026-09-15/tests/runUnitTests.m
-backup/retired-sense-mask_2026-09-15/+retro/+util/senseMapDisplayMask.m
-backup/retired-sense-mask_2026-09-15/tests/tSenseMapMask.m
-backup/before-sense-level_2026-09-15/retrospective10.mlapp
