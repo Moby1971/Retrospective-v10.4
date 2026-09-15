@@ -197,6 +197,7 @@ manuals/*.pages
 +retro/+util/rotz.m
 +retro/+util/row2im2D.m
 +retro/+util/row2im3D.m
++retro/+util/senseMapDisplayMask.m
 +retro/+util/settingOr.m
 +retro/+util/sliceSpacing.m
 +retro/+util/squarePixel.m
@@ -221,3 +222,7 @@ gui/adapters/askForFolder.m
 gui/adapters/gatherRecoParams.m
 gui/adapters/mrdAutoRecoManager.m
 pcodeAll.m
+backup/before-tar-check_2026-09-15/+retro/+python/createPythonEnvironment.m
+backup/before-tar-check_2026-09-15/+retro/+python/explainSetupFailure.m
+backup/before-tar-check_2026-09-15/+retro/+python/pythonSetupMarkers.m
+backup/before-tar-check_2026-09-15/tests/runUnitTests.m
