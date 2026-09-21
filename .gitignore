@@ -55,6 +55,7 @@ manuals/*.pages
 +retro/+io/defaultSettings.m
 +retro/+io/deleteIfPresent.m
 +retro/+io/dicomSourceCandidates.m
++retro/+io/exportBidsPhysio.m
 +retro/+io/exportDicomDcm.m
 +retro/+io/exportDicomMat.m
 +retro/+io/exportGif.m
