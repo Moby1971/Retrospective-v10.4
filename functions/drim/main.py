@@ -509,16 +509,30 @@ def check_memory(config, dataset):
 
     # The message is the last line of the traceback, which is what the app shows, so it
     # carries the numbers and what to do about them rather than only the fact.
-    fits = max(1, int(usable_frames(budget, height, width)))
-    pools = (f"{onDevice / gib:.1f} GB on the card and {spill / gib:.1f} GB shared"
-             if spill > 0 else f"{budget / gib:.1f} GB")
+    #
+    # The frame count it offers has to come from the limit that was actually applied, or the
+    # advice contradicts the decision. On cuda the refusal is taken against the whole budget;
+    # everywhere else against the planned fraction of it. Taking both from the whole budget
+    # refused 12 frames on a Mac and in the same sentence said 13 would fit -- against the
+    # 7.8 of 11.8 GB that was planned for, 8 fit.
+    limit = budget if device == 'cuda' else usable
+    fits = max(1, int(usable_frames(limit, height, width)))
+
+    if spill > 0:
+        offers = (f"about {budget / gib:.1f} GB to {device} ({onDevice / gib:.1f} GB on the "
+                  f"card and {spill / gib:.1f} GB shared)")
+    elif limit < budget:
+        offers = (f"about {limit / gib:.1f} GB of the {budget / gib:.1f} GB {device} allows "
+                  f"can be planned for, the rest being left for the allocator's own use")
+    else:
+        offers = f"about {budget / gib:.1f} GB to {device}"
+
     raise CannotReconstruct(
         f"Not enough memory for the deep learning reconstruction. {frames} frames at "
-        f"{height} x {width} need about {needed / gib:.1f} GB, and this machine offers "
-        f"about {budget / gib:.1f} GB to {device} ({pools}). About {fits} frames would fit "
-        f"here. The matrix is not a lever: data_sampler refills every scan onto "
-        f"{height} x {width} whatever was acquired, so the frame count is what decides this, "
-        f"along with how much memory the machine has.")
+        f"{height} x {width} need about {needed / gib:.1f} GB, and {offers}. About {fits} "
+        f"frames would fit here. The matrix is not a lever: data_sampler refills every scan "
+        f"onto {height} x {width} whatever was acquired, so the frame count is what decides "
+        f"this, along with how much memory the machine has.")
 
 
 def usable_frames(usable_bytes, height, width, nfeature=128):

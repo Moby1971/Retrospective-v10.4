@@ -144,6 +144,7 @@ manuals/*.pages
 +retro/+reco/estdelayToDelays.m
 +retro/+reco/estimateDataOffset.m
 +retro/+reco/estimateRadialDelays.m
++retro/+reco/llrBlockSize.m
 +retro/+reco/lowRankThresh2D.m
 +retro/+reco/lowRankThresh3D.m
 +retro/+reco/maxGradDelay.m
