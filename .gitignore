@@ -53,6 +53,7 @@ manuals/*.pages
 +retro/+io/adjustDicomGroupLength.m
 +retro/+io/collectHorosRois.m
 +retro/+io/defaultSettings.m
++retro/+io/defaultUteTrajectory.m
 +retro/+io/deleteIfPresent.m
 +retro/+io/dicomSourceCandidates.m
 +retro/+io/exportBidsPhysio.m
@@ -81,6 +82,7 @@ manuals/*.pages
 +retro/+io/pruneLogFiles.m
 +retro/+io/readGradDelays.m
 +retro/+io/readSettingsFile.m
++retro/+io/readUteTrajectory.m
 +retro/+io/recoSurFiles.m
 +retro/+io/releaseVersionSources.m
 +retro/+io/replaceDicomUi.m
@@ -152,6 +154,8 @@ manuals/*.pages
 +retro/+reco/partialDerivative3D.m
 +retro/+traj/trajApplyDelays.m
 +retro/+traj/trajInterpolation.m
++retro/+traj/uteDirectedSpokes.m
++retro/+traj/uteSpokeTrajectory.m
 +retro/+util/angularGaps.m
 +retro/+util/calculatePlaneIntersection.m
 +retro/+util/calculatePlaneMidlineProjection.m
@@ -251,6 +255,7 @@ functions/nufft/@nufft_3d/pruno.m
 functions/nufft/@nufft_3d/sake.m
 functions/nufft/DWT.m
 functions/nufft/fraccircshift.m
+functions/nufft/nufftMessage.m
 functions/nufft/pcgL1.m
 functions/nufft/pcgpc.m
 functions/recomat/@Emat_yxt/Emat_yxt.m
