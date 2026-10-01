@@ -152,6 +152,12 @@ manuals/*.pages
 +retro/+reco/maxGradDelay.m
 +retro/+reco/partialDerivative2D.m
 +retro/+reco/partialDerivative3D.m
+# added 2026-09-30
++retro/+io/exportPpl.m
++retro/+reco/cubicResample.m
++retro/+reco/unring1D.m
++retro/+reco/unring3D.m
++retro/+reco/unringComplex.m
 +retro/+traj/trajApplyDelays.m
 +retro/+traj/trajInterpolation.m
 +retro/+traj/uteDirectedSpokes.m
